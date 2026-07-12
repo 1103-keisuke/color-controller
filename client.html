@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>参加 - 色コントローラー</title>
+
+  <!-- PWA: ホーム画面追加でフルスクリーン起動 -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="色コントローラー">
+  <meta name="theme-color" content="#1a1a2e">
+
   <script src="/socket.io/socket.io.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -19,6 +27,36 @@
       background: #1a1a2e;
     }
 
+    /* --- ホーム画面追加バナー --- */
+    #pwa-banner {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #eee;
+      padding: 14px 20px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      text-align: center;
+      max-width: 300px;
+      width: calc(100% - 48px);
+      z-index: 100;
+    }
+
+    #pwa-banner strong { display: block; margin-bottom: 4px; font-size: 0.95rem; }
+    #pwa-banner .steps { color: #aaa; font-size: 0.8rem; }
+    #pwa-banner-close {
+      position: absolute;
+      top: 8px; right: 12px;
+      background: none; border: none;
+      color: #aaa; font-size: 1.1rem; cursor: pointer;
+    }
+
     /* --- Waiting screen --- */
     #waitScreen {
       display: flex;
@@ -29,9 +67,7 @@
       text-align: center;
     }
 
-    .logo {
-      font-size: 3rem;
-    }
+    .logo { font-size: 3rem; }
 
     #waitScreen h1 {
       color: #eee;
@@ -71,16 +107,13 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
     }
 
-    #colorScreen.visible {
-      display: flex;
-    }
+    #colorScreen.visible { display: flex; }
 
     .toast {
       position: fixed;
-      top: 32px;
+      top: env(safe-area-inset-top, 32px);
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255,255,255,0.2);
@@ -100,7 +133,7 @@
 
     .leave-btn {
       position: fixed;
-      bottom: 32px;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.25);
@@ -115,6 +148,13 @@
   </style>
 </head>
 <body>
+
+  <!-- ホーム画面追加バナー -->
+  <div id="pwa-banner">
+    <button id="pwa-banner-close">✕</button>
+    <strong>📱 フルスクリーンで使う</strong>
+    <div class="steps" id="pwa-steps"></div>
+  </div>
 
   <!-- Waiting / join screen -->
   <div id="waitScreen">
@@ -131,6 +171,30 @@
   </div>
 
   <script>
+    // --- PWAバナー ---
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                      || window.navigator.standalone === true;
+
+    if (!isStandalone) {
+      const banner = document.getElementById('pwa-banner');
+      const steps  = document.getElementById('pwa-steps');
+      const isIOS  = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isAndroid = /android/i.test(navigator.userAgent);
+
+      if (isIOS) {
+        steps.textContent = '画面下の「共有」→「ホーム画面に追加」をタップ';
+        banner.style.display = 'block';
+      } else if (isAndroid) {
+        steps.textContent = 'メニュー「⋮」→「ホーム画面に追加」をタップ';
+        banner.style.display = 'block';
+      }
+
+      document.getElementById('pwa-banner-close').addEventListener('click', () => {
+        banner.style.display = 'none';
+      });
+    }
+
+    // --- ソケット接続 ---
     let socket = null;
 
     const waitScreen = document.getElementById('waitScreen');
@@ -140,20 +204,18 @@
     const toast = document.getElementById('toast');
 
     joinBtn.addEventListener('click', () => {
-      // Connect to server as a client
       socket = io({ query: { role: 'client' } });
 
       socket.on('connect', () => {
-        // Switch to fullscreen color view
         waitScreen.style.display = 'none';
         colorScreen.classList.add('visible');
+        document.getElementById('pwa-banner').style.display = 'none';
 
-        // Show brief connected toast, then fade out
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 2000);
 
-        // Try fullscreen on mobile
-        if (document.documentElement.requestFullscreen) {
+        // Android Chromeではフルスクリーン試行
+        if (!isStandalone && document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen().catch(() => {});
         }
       });
@@ -163,26 +225,18 @@
         document.body.style.backgroundColor = color;
       });
 
-      socket.on('disconnect', () => {
-        leave();
-      });
+      socket.on('disconnect', () => { leave(); });
     });
 
     leaveBtn.addEventListener('click', leave);
 
     function leave() {
-      if (socket) {
-        socket.disconnect();
-        socket = null;
-      }
+      if (socket) { socket.disconnect(); socket = null; }
       colorScreen.classList.remove('visible');
       colorScreen.style.backgroundColor = '';
       document.body.style.backgroundColor = '#1a1a2e';
       waitScreen.style.display = 'flex';
-
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
     }
   </script>
 </body>
