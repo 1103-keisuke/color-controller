@@ -8,14 +8,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px; }
     h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em; padding-top: 8px; }
     .status { display: flex; align-items: center; gap: 10px; background: #16213e; padding: 10px 22px; border-radius: 999px; font-size: 0.95rem; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     .preview-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
     .preview-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; }
-    .preview { width: 180px; height: 120px; border-radius: 16px; border: 3px solid rgba(255,255,255,0.1); transition: background-color 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .preview { width: 180px; height: 110px; border-radius: 16px; border: 3px solid rgba(255,255,255,0.1); transition: background-color 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
     .color-area { display: flex; align-items: center; gap: 20px; width: 100%; max-width: 400px; }
     .picker-side { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     input[type="color"] { width: 64px; height: 64px; border: none; border-radius: 50%; cursor: pointer; background: none; padding: 0; outline: none; }
@@ -30,6 +30,9 @@
     .rgb-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.5); cursor: pointer; border: 2px solid rgba(255,255,255,0.9); }
     .rgb-num { width: 46px; background: #0f172a; border: 1px solid #334155; color: #eee; border-radius: 7px; padding: 4px 5px; font-size: 0.82rem; text-align: center; flex-shrink: 0; }
     .rgb-num:focus { outline: none; border-color: #6366f1; }
+    .mode-hint { display: none; padding: 7px 18px; background: rgba(99,102,241,0.2); border: 1.5px solid #6366f1; border-radius: 999px; font-size: 0.82rem; color: #c7d2fe; font-weight: 600; text-align: center; animation: hint-glow 2s ease-in-out infinite; }
+    .mode-hint.visible { display: block; }
+    @keyframes hint-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); } 50% { box-shadow: 0 0 10px 2px rgba(99,102,241,0.4); } }
     .presets { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 340px; }
     .preset-btn { width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform 0.15s, border-color 0.15s; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
     .preset-btn:hover { transform: scale(1.15); }
@@ -42,20 +45,22 @@
     .send-btn:active { transform: scale(0.97); }
     .section-divider { width: 100%; max-width: 400px; display: flex; align-items: center; gap: 12px; color: #444; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
     .section-divider::before, .section-divider::after { content: ''; flex: 1; border-top: 1px solid #2a2a4a; }
-    .split-panel { width: 100%; max-width: 400px; background: #16213e; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .split-panel { width: 100%; max-width: 400px; background: #16213e; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
     .split-count-row { display: flex; gap: 8px; }
     .split-count-btn { flex: 1; padding: 8px 0; border-radius: 10px; border: 2px solid #2a2a4a; background: transparent; color: #888; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
     .split-count-btn.active { border-color: #6366f1; color: #c7d2fe; background: rgba(99,102,241,0.15); }
-    .split-colors { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-    .split-color-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .split-color-label { font-size: 0.75rem; color: #888; letter-spacing: 0.06em; }
-    .split-color-picker { width: 48px; height: 48px; border: none; border-radius: 12px; cursor: pointer; background: none; padding: 0; outline: none; }
-    .split-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
-    .split-color-picker::-webkit-color-swatch { border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+    .split-group-row { display: flex; gap: 12px; align-items: flex-end; }
+    .group-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 2px solid #2a2a4a; border-radius: 14px; padding: 10px 14px; cursor: pointer; transition: all 0.15s; flex: 1; }
+    .group-btn:hover { border-color: #555; }
+    .group-btn.active { border-color: white; background: rgba(255,255,255,0.06); box-shadow: 0 0 12px rgba(255,255,255,0.15); }
+    .group-dot { width: 36px; height: 36px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: background-color 0.2s; }
+    .group-label { font-size: 0.78rem; color: #aaa; font-weight: 600; letter-spacing: 0.05em; }
+    .group-btn.active .group-label { color: #eee; }
+    .split-hint { font-size: 0.8rem; color: #666; text-align: center; }
     .split-send-btn { width: 100%; background: linear-gradient(135deg, #6366f1, #ec4899); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
     .split-send-btn:hover { opacity: 0.9; }
     .split-send-btn:active { transform: scale(0.98); }
-    .split-result { font-size: 0.85rem; color: #888; text-align: center; min-height: 20px; }
+    .split-result { font-size: 0.85rem; color: #888; text-align: center; min-height: 18px; }
     .qr-section { display: flex; flex-direction: column; align-items: center; gap: 10px; background: #16213e; border-radius: 20px; padding: 20px 28px; }
     .qr-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; }
     #qrcode { background: white; padding: 10px; border-radius: 10px; line-height: 0; }
@@ -79,6 +84,7 @@
       <div class="rgb-row"><span class="rgb-label" style="color:#60a5fa">B</span><input type="range" class="rgb-slider" id="sliderB" min="0" max="255" value="241"><input type="number" class="rgb-num" id="numB" min="0" max="255" value="241"></div>
     </div>
   </div>
+  <div class="mode-hint" id="modeHint">グループ 1 の色を設定中　← 下の色をタップして決定</div>
   <div class="presets">
     <button class="preset-btn" style="background:#ef4444" data-color="#ef4444"></button>
     <button class="preset-btn" style="background:#f97316" data-color="#f97316"></button>
@@ -99,7 +105,8 @@
       <button class="split-count-btn" data-n="3">3分割</button>
       <button class="split-count-btn" data-n="4">4分割</button>
     </div>
-    <div class="split-colors" id="splitColors"></div>
+    <div class="split-hint">グループをタップ → 上の色で設定（もう一度タップで解除）</div>
+    <div class="split-group-row" id="splitGroupRow"></div>
     <button class="split-send-btn" id="splitSendBtn">🎭 ランダムに分割して送信</button>
     <div class="split-result" id="splitResult"></div>
   </div>
@@ -107,49 +114,47 @@
   <div class="sent-toast" id="toast">✓ 送信しました</div>
   <script>
     const socket=io({query:{role:'host'}});
-    const picker=document.getElementById('colorPicker'),preview=document.getElementById('preview'),hexDisplay=document.getElementById('hexDisplay'),countEl=document.getElementById('count'),sendBtn=document.getElementById('sendBtn'),toast=document.getElementById('toast');
+    const picker=document.getElementById('colorPicker'),preview=document.getElementById('preview'),hexDisplay=document.getElementById('hexDisplay'),countEl=document.getElementById('count'),sendBtn=document.getElementById('sendBtn'),toast=document.getElementById('toast'),modeHint=document.getElementById('modeHint');
     const sliderR=document.getElementById('sliderR'),sliderG=document.getElementById('sliderG'),sliderB=document.getElementById('sliderB'),numR=document.getElementById('numR'),numG=document.getElementById('numG'),numB=document.getElementById('numB');
-    let selectedColor=picker.value;
+    let selectedColor=picker.value,activeGroup=null;
+    const DC=['#ef4444','#6366f1','#22c55e','#eab308'];
+    let groupColors=[...DC],splitN=2;
     function hexToRgb(h){return{r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)};}
     function rgbToHex(r,g,b){return'#'+[r,g,b].map(v=>Math.min(255,Math.max(0,v)).toString(16).padStart(2,'0')).join('');}
-    function updateGrad(r,g,b){
-      sliderR.style.background='linear-gradient(to right,rgb(0,'+g+','+b+'),rgb(255,'+g+','+b+'))';
-      sliderG.style.background='linear-gradient(to right,rgb('+r+',0,'+b+'),rgb('+r+',255,'+b+'))';
-      sliderB.style.background='linear-gradient(to right,rgb('+r+','+g+',0),rgb('+r+','+g+',255))';
-    }
-    function updateUI(color,src){
-      selectedColor=color;picker.value=color;preview.style.backgroundColor=color;hexDisplay.textContent=color.toUpperCase();
-      const{r,g,b}=hexToRgb(color);
-      sliderR.value=r;numR.value=r;sliderG.value=g;numG.value=g;sliderB.value=b;numB.value=b;
-      updateGrad(r,g,b);
+    function updateGrad(r,g,b){sliderR.style.background='linear-gradient(to right,rgb(0,'+g+','+b+'),rgb(255,'+g+','+b+'))';sliderG.style.background='linear-gradient(to right,rgb('+r+',0,'+b+'),rgb('+r+',255,'+b+'))';sliderB.style.background='linear-gradient(to right,rgb('+r+','+g+',0),rgb('+r+','+g+',255))';}
+    function updateUI(color,source){
+      picker.value=color;hexDisplay.textContent=color.toUpperCase();preview.style.backgroundColor=color;
+      const{r,g,b}=hexToRgb(color);sliderR.value=r;numR.value=r;sliderG.value=g;numG.value=g;sliderB.value=b;numB.value=b;updateGrad(r,g,b);
       document.querySelectorAll('.preset-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.color===color));
-      if(src!=='random')document.getElementById('randomBtn').classList.remove('active');
+      if(source!=='random')document.getElementById('randomBtn').classList.remove('active');
+      if(activeGroup!==null&&source!=='group-select'){groupColors[activeGroup]=color;const dot=document.getElementById('groupDot'+activeGroup);if(dot)dot.style.background=color;}
+      else if(source!=='group-select'){selectedColor=color;}
     }
     updateUI(selectedColor);
-    picker.addEventListener('input',()=>updateUI(picker.value));
-    document.querySelectorAll('.preset-btn').forEach(btn=>btn.addEventListener('click',()=>updateUI(btn.dataset.color)));
-    document.getElementById('randomBtn').addEventListener('click',()=>{
-      const c='#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
-      updateUI(c,'random');document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
-      document.getElementById('randomBtn').classList.add('active');
-    });
-    function onRgb(){const r=+sliderR.value,g=+sliderG.value,b=+sliderB.value;numR.value=r;numG.value=g;numB.value=b;updateUI(rgbToHex(r,g,b));document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));}
+    picker.addEventListener('input',()=>updateUI(picker.value,'picker'));
+    document.querySelectorAll('.preset-btn').forEach(btn=>btn.addEventListener('click',()=>updateUI(btn.dataset.color,'preset')));
+    document.getElementById('randomBtn').addEventListener('click',()=>{const c='#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');updateUI(c,'random');document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));document.getElementById('randomBtn').classList.add('active');});
+    function onRgb(){const r=+sliderR.value,g=+sliderG.value,b=+sliderB.value;numR.value=r;numG.value=g;numB.value=b;updateUI(rgbToHex(r,g,b),'rgb');document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));}
     function onNum(ch){const inp=document.getElementById('num'+ch);const v=Math.min(255,Math.max(0,parseInt(inp.value)||0));inp.value=v;document.getElementById('slider'+ch).value=v;onRgb();}
     ['R','G','B'].forEach(ch=>{document.getElementById('slider'+ch).addEventListener('input',onRgb);document.getElementById('num'+ch).addEventListener('input',()=>onNum(ch));document.getElementById('num'+ch).addEventListener('change',()=>onNum(ch));});
     sendBtn.addEventListener('click',()=>{socket.emit('setColor',selectedColor);showToast('✓ 送信しました');});
-    const DC=['#ef4444','#6366f1','#22c55e','#eab308'];let splitN=2;
-    function buildSplit(){
-      const c=document.getElementById('splitColors');c.innerHTML='';
-      for(let i=0;i<splitN;i++){const d=document.createElement('div');d.className='split-color-item';d.innerHTML='<div class="split-color-label">グループ'+(i+1)+'</div><input type="color" class="split-color-picker" id="splitColor'+i+'" value="'+DC[i]+'">';c.appendChild(d);}
+    function selectGroup(i){
+      if(activeGroup===i){activeGroup=null;document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active'));modeHint.classList.remove('visible');updateUI(selectedColor,'group-select');}
+      else{activeGroup=i;document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active'));document.getElementById('groupBtn'+i).classList.add('active');modeHint.textContent='グループ '+(i+1)+' の色を設定中　← 下の色をタップして決定';modeHint.classList.add('visible');updateUI(groupColors[i],'group-select');}
     }
-    buildSplit();
-    document.querySelectorAll('.split-count-btn').forEach(btn=>btn.addEventListener('click',()=>{splitN=+btn.dataset.n;document.querySelectorAll('.split-count-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');buildSplit();document.getElementById('splitResult').textContent='';}));
-    document.getElementById('splitSendBtn').addEventListener('click',()=>{const colors=[];for(let i=0;i<splitN;i++)colors.push(document.getElementById('splitColor'+i).value);socket.emit('splitGroups',{colors});});
-    socket.on('splitResult',({groupCounts})=>{const t=groupCounts.reduce((a,b)=>a+b,0);const p=groupCounts.map((n,i)=>'G'+(i+1)+':'+n+'人').join(' ');document.getElementById('splitResult').textContent='計'+t+'人 → '+p;showToast('🎭 分割送信しました');});
-    socket.on('clientCount',(n)=>{countEl.textContent=n;});
-    socket.on('color',(c)=>{updateUI(c);});
+    function buildSplitGroups(){
+      const row=document.getElementById('splitGroupRow');row.innerHTML='';
+      for(let i=0;i<splitN;i++){const btn=document.createElement('button');btn.className='group-btn';btn.id='groupBtn'+i;btn.innerHTML='<div class="group-dot" id="groupDot'+i+'" style="background:'+groupColors[i]+'"></div><span class="group-label">グループ '+(i+1)+'</span>';btn.addEventListener('click',()=>selectGroup(i));row.appendChild(btn);}
+      if(activeGroup!==null&&activeGroup>=splitN){activeGroup=null;modeHint.classList.remove('visible');updateUI(selectedColor,'group-select');}
+    }
+    buildSplitGroups();
+    document.querySelectorAll('.split-count-btn').forEach(btn=>btn.addEventListener('click',()=>{splitN=+btn.dataset.n;document.querySelectorAll('.split-count-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');buildSplitGroups();document.getElementById('splitResult').textContent='';}));
+    document.getElementById('splitSendBtn').addEventListener('click',()=>{socket.emit('splitGroups',{colors:groupColors.slice(0,splitN)});});
+    socket.on('splitResult',({groupCounts})=>{const t=groupCounts.reduce((a,b)=>a+b,0);const p=groupCounts.map((n,i)=>'G'+(i+1)+':'+n+'人').join('　');document.getElementById('splitResult').textContent='計'+t+'人 → '+p;showToast('🎭 分割送信しました');});
+    socket.on('clientCount',n=>{countEl.textContent=n;});
+    socket.on('color',c=>{updateUI(c,'socket');});
     function showToast(msg){toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800);}
-    fetch('/api/client-url').then(r=>r.json()).then(({url})=>{document.getElementById('qrUrl').textContent=url;new QRCode(document.getElementById('qrcode'),{text:url,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}).catch(()=>{document.getElementById('qrUrl').textContent='URL取得に失敗';});
+    fetch('/api/client-url').then(r=>r.json()).then(({url})=>{document.getElementById('qrUrl').textContent=url;new QRCode(document.getElementById('qrcode'),{text:url,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}).catch(()=>{document.getElementById('qrUrl').textContent='URL取得に失敗しました';});
   </script>
 </body>
 </html>
