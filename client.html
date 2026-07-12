@@ -78,15 +78,25 @@
       display: flex;
     }
 
-    .connected-label {
-      font-size: 1rem;
-      font-weight: 600;
-      mix-blend-mode: difference;
+    .toast {
+      position: fixed;
+      top: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.2);
       color: white;
-      opacity: 0.5;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+      white-space: nowrap;
     }
+
+    .toast.show { opacity: 1; }
 
     .leave-btn {
       position: fixed;
@@ -116,7 +126,7 @@
 
   <!-- Fullscreen color display -->
   <div id="colorScreen">
-    <div class="connected-label">接続中</div>
+    <div class="toast" id="toast">✓ 接続しました</div>
     <button class="leave-btn" id="leaveBtn">退出</button>
   </div>
 
@@ -127,6 +137,7 @@
     const colorScreen = document.getElementById('colorScreen');
     const joinBtn = document.getElementById('joinBtn');
     const leaveBtn = document.getElementById('leaveBtn');
+    const toast = document.getElementById('toast');
 
     joinBtn.addEventListener('click', () => {
       // Connect to server as a client
@@ -136,6 +147,10 @@
         // Switch to fullscreen color view
         waitScreen.style.display = 'none';
         colorScreen.classList.add('visible');
+
+        // Show brief connected toast, then fade out
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
 
         // Try fullscreen on mobile
         if (document.documentElement.requestFullscreen) {
