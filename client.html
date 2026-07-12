@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>参加 - 色コントローラー</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.5s ease;
+      background: #1a1a2e;
+    }
+
+    /* --- Waiting screen --- */
+    #waitScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 3rem;
+    }
+
+    #waitScreen h1 {
+      color: #eee;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    #waitScreen p {
+      color: #888;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .join-btn {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 18px 56px;
+      border-radius: 999px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+    }
+
+    .join-btn:hover { background: #4f46e5; }
+    .join-btn:active { transform: scale(0.96); }
+
+    /* --- Connected screen (fullscreen color) --- */
+    #colorScreen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      transition: background-color 0.5s ease;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    #colorScreen.visible {
+      display: flex;
+    }
+
+    .connected-label {
+      font-size: 1rem;
+      font-weight: 600;
+      mix-blend-mode: difference;
+      color: white;
+      opacity: 0.5;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .leave-btn {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.25);
+      color: white;
+      border: none;
+      padding: 10px 28px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Waiting / join screen -->
+  <div id="waitScreen">
+    <div class="logo">🎨</div>
+    <h1>色コントローラーに参加</h1>
+    <p>ボタンを押すとサーバーに接続し、<br>ホストが選んだ色があなたの画面いっぱいに表示されます。</p>
+    <button class="join-btn" id="joinBtn">参加する</button>
+  </div>
+
+  <!-- Fullscreen color display -->
+  <div id="colorScreen">
+    <div class="connected-label">接続中</div>
+    <button class="leave-btn" id="leaveBtn">退出</button>
+  </div>
+
+  <script>
+    let socket = null;
+
+    const waitScreen = document.getElementById('waitScreen');
+    const colorScreen = document.getElementById('colorScreen');
+    const joinBtn = document.getElementById('joinBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+
+    joinBtn.addEventListener('click', () => {
+      // Connect to server as a client
+      socket = io({ query: { role: 'client' } });
+
+      socket.on('connect', () => {
+        // Switch to fullscreen color view
+        waitScreen.style.display = 'none';
+        colorScreen.classList.add('visible');
+
+        // Try fullscreen on mobile
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      });
+
+      socket.on('color', (color) => {
+        colorScreen.style.backgroundColor = color;
+        document.body.style.backgroundColor = color;
+      });
+
+      socket.on('disconnect', () => {
+        leave();
+      });
+    });
+
+    leaveBtn.addEventListener('click', leave);
+
+    function leave() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+      colorScreen.classList.remove('visible');
+      colorScreen.style.backgroundColor = '';
+      document.body.style.backgroundColor = '#1a1a2e';
+      waitScreen.style.display = 'flex';
+
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  </script>
+</body>
+</html>

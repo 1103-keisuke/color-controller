@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ホスト - 色コントローラー</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #16213e;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .preview-label {
+      font-size: 0.8rem;
+      color: #888;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .preview {
+      width: 200px;
+      height: 200px;
+      border-radius: 20px;
+      border: 3px solid rgba(255,255,255,0.1);
+      transition: background-color 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .color-picker-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    input[type="color"] {
+      width: 80px;
+      height: 80px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+      outline: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 50%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .hex-display {
+      font-size: 1.2rem;
+      font-family: monospace;
+      color: #aaa;
+      letter-spacing: 0.15em;
+    }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      max-width: 320px;
+    }
+
+    .preset-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .preset-btn:hover {
+      transform: scale(1.15);
+    }
+
+    .preset-btn.active {
+      border-color: white;
+    }
+
+    .random-btn {
+      width: auto;
+      padding: 0 16px;
+      height: 44px;
+      border-radius: 999px;
+      border: 3px solid transparent;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #ef4444, #f97316, #eab308, #22c55e, #6366f1, #ec4899);
+      color: white;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      transition: transform 0.15s, opacity 0.15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .random-btn:hover { transform: scale(1.1); opacity: 0.9; }
+    .random-btn.active { border-color: white; }
+
+    .send-btn {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 14px 48px;
+      border-radius: 999px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+
+    .send-btn:hover { background: #4f46e5; }
+    .send-btn:active { transform: scale(0.97); }
+
+    .sent-toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #4ade80;
+      color: #111;
+      padding: 10px 28px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: transform 0.3s ease;
+      pointer-events: none;
+    }
+
+    .sent-toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* QR section */
+    .qr-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: #16213e;
+      border-radius: 20px;
+      padding: 20px 28px;
+    }
+
+    .qr-label {
+      font-size: 0.8rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    #qrcode {
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      line-height: 0;
+    }
+
+    .qr-url {
+      font-size: 0.8rem;
+      color: #6366f1;
+      font-family: monospace;
+      word-break: break-all;
+      text-align: center;
+      max-width: 220px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎨 色コントローラー</h1>
+
+  <div class="status">
+    <div class="dot"></div>
+    <span>接続中のスマホ: <strong id="count">0</strong> 台</span>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+    <div class="preview-label">プレビュー</div>
+    <div class="preview" id="preview"></div>
+  </div>
+
+  <div class="controls">
+    <div class="color-picker-wrap">
+      <input type="color" id="colorPicker" value="#6366f1">
+      <div class="hex-display" id="hexDisplay">#6366f1</div>
+    </div>
+
+    <div class="presets">
+      <button class="preset-btn" style="background:#ef4444" data-color="#ef4444" title="赤"></button>
+      <button class="preset-btn" style="background:#f97316" data-color="#f97316" title="オレンジ"></button>
+      <button class="preset-btn" style="background:#eab308" data-color="#eab308" title="黄"></button>
+      <button class="preset-btn" style="background:#22c55e" data-color="#22c55e" title="緑"></button>
+      <button class="preset-btn" style="background:#06b6d4" data-color="#06b6d4" title="シアン"></button>
+      <button class="preset-btn" style="background:#6366f1" data-color="#6366f1" title="紫"></button>
+      <button class="preset-btn" style="background:#ec4899" data-color="#ec4899" title="ピンク"></button>
+      <button class="preset-btn" style="background:#ffffff;border-color:#444" data-color="#ffffff" title="白"></button>
+      <button class="preset-btn" style="background:#000000" data-color="#000000" title="黒"></button>
+      <button class="random-btn" id="randomBtn">🎲 ランダム</button>
+    </div>
+
+    <button class="send-btn" id="sendBtn">送信</button>
+  </div>
+
+  <!-- QR Code for participants -->
+  <div class="qr-section">
+    <div class="qr-label">📱 スマホで読んで参加</div>
+    <div id="qrcode"></div>
+    <div class="qr-url" id="qrUrl">読み込み中...</div>
+  </div>
+
+  <div class="sent-toast" id="toast">✓ 送信しました</div>
+
+  <script>
+    const socket = io({ query: { role: 'host' } });
+
+    const picker = document.getElementById('colorPicker');
+    const preview = document.getElementById('preview');
+    const hexDisplay = document.getElementById('hexDisplay');
+    const countEl = document.getElementById('count');
+    const sendBtn = document.getElementById('sendBtn');
+    const toast = document.getElementById('toast');
+
+    let selectedColor = picker.value;
+
+    function updateUI(color) {
+      selectedColor = color;
+      picker.value = color;
+      preview.style.backgroundColor = color;
+      hexDisplay.textContent = color;
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.color === color);
+      });
+      // Deactivate random btn unless called from random handler
+      const randomBtn = document.getElementById('randomBtn');
+      if (randomBtn) randomBtn.classList.remove('active');
+    }
+
+    updateUI(selectedColor);
+
+    picker.addEventListener('input', () => updateUI(picker.value));
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => updateUI(btn.dataset.color));
+    });
+
+    function randomHex() {
+      return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+    }
+
+    document.getElementById('randomBtn').addEventListener('click', () => {
+      const color = randomHex();
+      updateUI(color);
+      // Clear preset active state since it's a random color
+      document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('randomBtn').classList.add('active');
+    });
+
+    sendBtn.addEventListener('click', () => {
+      socket.emit('setColor', selectedColor);
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+    });
+
+    socket.on('clientCount', (count) => {
+      countEl.textContent = count;
+    });
+
+    socket.on('color', (color) => {
+      updateUI(color);
+    });
+
+    // Generate QR code for client URL
+    fetch('/api/client-url')
+      .then(r => r.json())
+      .then(({ url }) => {
+        document.getElementById('qrUrl').textContent = url;
+        new QRCode(document.getElementById('qrcode'), {
+          text: url,
+          width: 180,
+          height: 180,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      })
+      .catch(() => {
+        document.getElementById('qrUrl').textContent = 'URL取得に失敗しました';
+      });
+  </script>
+</body>
+</html>
