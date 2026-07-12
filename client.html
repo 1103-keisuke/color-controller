@@ -4,240 +4,95 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>参加 - 色コントローラー</title>
-
-  <!-- PWA: ホーム画面追加でフルスクリーン起動 -->
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="色コントローラー">
   <meta name="theme-color" content="#1a1a2e">
-
   <script src="/socket.io/socket.io.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background-color 0.5s ease;
-      background: #1a1a2e;
-    }
-
-    /* --- ホーム画面追加バナー --- */
-    #pwa-banner {
-      display: none;
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.12);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #eee;
-      padding: 14px 20px;
-      border-radius: 16px;
-      font-size: 0.85rem;
-      line-height: 1.5;
-      text-align: center;
-      max-width: 300px;
-      width: calc(100% - 48px);
-      z-index: 100;
-    }
-
-    #pwa-banner strong { display: block; margin-bottom: 4px; font-size: 0.95rem; }
-    #pwa-banner .steps { color: #aaa; font-size: 0.8rem; }
-    #pwa-banner-close {
-      position: absolute;
-      top: 8px; right: 12px;
-      background: none; border: none;
-      color: #aaa; font-size: 1.1rem; cursor: pointer;
-    }
-
-    /* --- Waiting screen --- */
-    #waitScreen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-      padding: 32px;
-      text-align: center;
-    }
-
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; transition: background-color 0.5s ease; background: #1a1a2e; }
+    #waitScreen { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 32px 24px; text-align: center; width: 100%; max-width: 360px; }
     .logo { font-size: 3rem; }
-
-    #waitScreen h1 {
-      color: #eee;
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    #waitScreen p {
-      color: #888;
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-
-    .join-btn {
-      background: #6366f1;
-      color: white;
-      border: none;
-      padding: 18px 56px;
-      border-radius: 999px;
-      font-size: 1.2rem;
-      font-weight: 700;
-      cursor: pointer;
-      letter-spacing: 0.05em;
-      transition: background 0.2s, transform 0.1s;
-      box-shadow: 0 8px 24px rgba(99,102,241,0.4);
-    }
-
-    .join-btn:hover { background: #4f46e5; }
+    #waitScreen h1 { color: #eee; font-size: 1.4rem; font-weight: 700; }
+    .install-card { width: 100%; background: rgba(99,102,241,0.15); border: 1.5px solid rgba(99,102,241,0.4); border-radius: 20px; padding: 18px; display: none; flex-direction: column; gap: 14px; text-align: left; }
+    .install-card.visible { display: flex; }
+    .install-card-title { color: #c7d2fe; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    #androidInstallBtn { display: none; width: 100%; background: #6366f1; color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    #androidInstallBtn:active { transform: scale(0.97); background: #4f46e5; }
+    #iosGuide { display: none; flex-direction: column; gap: 10px; }
+    .ios-step { display: flex; align-items: center; gap: 12px; color: #e2e8f0; font-size: 0.9rem; line-height: 1.4; }
+    .ios-step-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    #iosArrow { display: none; position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); flex-direction: column; align-items: center; gap: 2px; color: #818cf8; font-size: 0.75rem; font-weight: 700; pointer-events: none; animation: bounce 1.1s ease-in-out infinite; z-index: 50; }
+    @keyframes bounce { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(5px); } }
+    .join-btn { background: #6366f1; color: white; border: none; padding: 16px 52px; border-radius: 999px; font-size: 1.15rem; font-weight: 700; cursor: pointer; letter-spacing: 0.05em; transition: background 0.2s, transform 0.1s; box-shadow: 0 8px 24px rgba(99,102,241,0.4); }
     .join-btn:active { transform: scale(0.96); }
-
-    /* --- Connected screen (fullscreen color) --- */
-    #colorScreen {
-      display: none;
-      position: fixed;
-      inset: 0;
-      transition: background-color 0.5s ease;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
+    .join-btn:disabled { opacity: 0.5; cursor: default; }
+    .skip-link { color: #555; font-size: 0.82rem; cursor: pointer; text-decoration: underline; background: none; border: none; }
+    #colorScreen { display: none; position: fixed; inset: 0; transition: background-color 0.5s ease; flex-direction: column; align-items: center; justify-content: center; }
     #colorScreen.visible { display: flex; }
-
-    .toast {
-      position: fixed;
-      top: env(safe-area-inset-top, 32px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.2);
-      color: white;
-      padding: 10px 24px;
-      border-radius: 999px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      backdrop-filter: blur(8px);
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      pointer-events: none;
-      white-space: nowrap;
-    }
-
+    .toast { position: fixed; top: env(safe-area-inset-top, 32px); left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.2); color: white; padding: 10px 24px; border-radius: 999px; font-size: 0.95rem; font-weight: 600; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.4s ease; pointer-events: none; white-space: nowrap; }
     .toast.show { opacity: 1; }
-
-    .leave-btn {
-      position: fixed;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.25);
-      color: white;
-      border: none;
-      padding: 10px 28px;
-      border-radius: 999px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-    }
+    .leave-btn { position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 32px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.25); color: white; border: none; padding: 10px 28px; border-radius: 999px; font-size: 0.9rem; cursor: pointer; backdrop-filter: blur(8px); }
   </style>
 </head>
 <body>
-
-  <!-- ホーム画面追加バナー -->
-  <div id="pwa-banner">
-    <button id="pwa-banner-close">✕</button>
-    <strong>📱 フルスクリーンで使う</strong>
-    <div class="steps" id="pwa-steps"></div>
+  <div id="iosArrow">
+    <span>共有ボタンをタップ</span>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
   </div>
-
-  <!-- Waiting / join screen -->
   <div id="waitScreen">
     <div class="logo">🎨</div>
     <h1>色コントローラーに参加</h1>
-    <p>ボタンを押すとサーバーに接続し、<br>ホストが選んだ色があなたの画面いっぱいに表示されます。</p>
+    <div class="install-card" id="installCard">
+      <div class="install-card-title">📱 フルスクリーンで使う（推奨）</div>
+      <button id="androidInstallBtn">＋ ホーム画面に追加する</button>
+      <div id="iosGuide">
+        <div class="ios-step">
+          <div class="ios-step-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12H3v9h18v-9h-5"/><polyline points="12 3 12 15"/><polyline points="9 6 12 3 15 6"/></svg></div>
+          <span>画面<strong>下の共有ボタン</strong>をタップ</span>
+        </div>
+        <div class="ios-step"><div class="ios-step-icon">➕</div><span>「<strong>ホーム画面に追加</strong>」→「追加」</span></div>
+        <div class="ios-step"><div class="ios-step-icon">🚀</div><span>ホーム画面から起動すると<strong>全画面</strong>になります</span></div>
+      </div>
+    </div>
     <button class="join-btn" id="joinBtn">参加する</button>
+    <button class="skip-link" id="skipInstall" style="display:none">このままブラウザで参加する</button>
   </div>
-
-  <!-- Fullscreen color display -->
   <div id="colorScreen">
     <div class="toast" id="toast">✓ 接続しました</div>
     <button class="leave-btn" id="leaveBtn">退出</button>
   </div>
-
   <script>
-    // --- PWAバナー ---
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                      || window.navigator.standalone === true;
-
-    if (!isStandalone) {
-      const banner = document.getElementById('pwa-banner');
-      const steps  = document.getElementById('pwa-steps');
-      const isIOS  = /iphone|ipad|ipod/i.test(navigator.userAgent);
-      const isAndroid = /android/i.test(navigator.userAgent);
-
-      if (isIOS) {
-        steps.textContent = '画面下の「共有」→「ホーム画面に追加」をタップ';
-        banner.style.display = 'block';
-      } else if (isAndroid) {
-        steps.textContent = 'メニュー「⋮」→「ホーム画面に追加」をタップ';
-        banner.style.display = 'block';
-      }
-
-      document.getElementById('pwa-banner-close').addEventListener('click', () => {
-        banner.style.display = 'none';
-      });
+    const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+    const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAndroid=/android/i.test(navigator.userAgent);
+    let deferredPrompt=null;
+    window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;if(!isStandalone)showInstallCard('android');});
+    function showInstallCard(mode){
+      document.getElementById('installCard').classList.add('visible');
+      if(mode==='android'){document.getElementById('androidInstallBtn').style.display='block';document.getElementById('joinBtn').style.display='none';document.getElementById('skipInstall').style.display='block';}
+      else if(mode==='ios'){document.getElementById('iosGuide').style.display='flex';document.getElementById('iosArrow').style.display='flex';document.getElementById('joinBtn').textContent='ブラウザで参加する';}
     }
-
-    // --- ソケット接続 ---
-    let socket = null;
-
-    const waitScreen = document.getElementById('waitScreen');
-    const colorScreen = document.getElementById('colorScreen');
-    const joinBtn = document.getElementById('joinBtn');
-    const leaveBtn = document.getElementById('leaveBtn');
-    const toast = document.getElementById('toast');
-
-    joinBtn.addEventListener('click', () => {
-      socket = io({ query: { role: 'client' } });
-
-      socket.on('connect', () => {
-        waitScreen.style.display = 'none';
-        colorScreen.classList.add('visible');
-        document.getElementById('pwa-banner').style.display = 'none';
-
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2000);
-
-        // Android Chromeではフルスクリーン試行
-        if (!isStandalone && document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch(() => {});
-        }
-      });
-
-      socket.on('color', (color) => {
-        colorScreen.style.backgroundColor = color;
-        document.body.style.backgroundColor = color;
-      });
-
-      socket.on('disconnect', () => { leave(); });
+    document.getElementById('androidInstallBtn').addEventListener('click',async()=>{
+      if(!deferredPrompt)return;deferredPrompt.prompt();
+      const{outcome}=await deferredPrompt.userChoice;deferredPrompt=null;
+      if(outcome==='accepted'){document.getElementById('installCard').classList.remove('visible');const btn=document.getElementById('joinBtn');btn.textContent='ホーム画面から起動してください';btn.style.display='block';btn.disabled=true;document.getElementById('skipInstall').style.display='none';}
     });
-
-    leaveBtn.addEventListener('click', leave);
-
-    function leave() {
-      if (socket) { socket.disconnect(); socket = null; }
-      colorScreen.classList.remove('visible');
-      colorScreen.style.backgroundColor = '';
-      document.body.style.backgroundColor = '#1a1a2e';
-      waitScreen.style.display = 'flex';
-      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-    }
+    document.getElementById('skipInstall').addEventListener('click',()=>{document.getElementById('installCard').classList.remove('visible');const btn=document.getElementById('joinBtn');btn.style.display='block';btn.disabled=false;document.getElementById('skipInstall').style.display='none';});
+    if(!isStandalone&&isIOS)showInstallCard('ios');
+    let socket=null;
+    const waitScreen=document.getElementById('waitScreen'),colorScreen=document.getElementById('colorScreen'),joinBtn=document.getElementById('joinBtn'),leaveBtn=document.getElementById('leaveBtn'),toast=document.getElementById('toast');
+    joinBtn.addEventListener('click',()=>{
+      if(joinBtn.disabled)return;
+      socket=io({query:{role:'client'}});
+      socket.on('connect',()=>{waitScreen.style.display='none';colorScreen.classList.add('visible');document.getElementById('iosArrow').style.display='none';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2000);if(!isStandalone&&isAndroid&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});});
+      socket.on('color',(color)=>{colorScreen.style.backgroundColor=color;document.body.style.backgroundColor=color;});
+      socket.on('disconnect',()=>{leave();});
+    });
+    leaveBtn.addEventListener('click',leave);
+    function leave(){if(socket){socket.disconnect();socket=null;}colorScreen.classList.remove('visible');colorScreen.style.backgroundColor='';document.body.style.backgroundColor='#1a1a2e';waitScreen.style.display='flex';if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});}
   </script>
 </body>
 </html>
